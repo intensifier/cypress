@@ -142,7 +142,8 @@
       "types": "./react/dist/index.d.ts"
     },
     "./mount-utils": {
-      "require": "./mount-utils/dist/index.js"
+      "require": "./mount-utils/dist/index.js",
+      "types": "./mount-utils/dist/index.d.ts"
     }
   },
   "workspaces": {
