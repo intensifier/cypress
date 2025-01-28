@@ -17,12 +17,25 @@ describe('Comp with componentWillUnmount', () => {
     cy.contains('My component')
 
     // after we have confirmed the component exists let's remove it
-    // unmount() command is automatically enqueued
-    cy.unmount()
+    // mount something else so that unmount is called
+    cy.mount(<div>Test Component</div>)
 
-    // the component is gone from the DOM
+    // the previous component is gone from the DOM
     cy.contains('My component').should('not.exist')
     // the component has called the prop on unmount
     cy.get('@onUnmount').should('have.been.calledOnce')
   })
+})
+
+describe('mount cleanup', () => {
+  beforeEach(() => {
+    cy.contains('My Component').should('not.exist')
+  })
+
+  for (const num of [1, 2]) {
+    it(`mount ${num}`, () => {
+      cy.mount(<Comp onUnmount={() => {}} />)
+      cy.contains('My component')
+    })
+  }
 })

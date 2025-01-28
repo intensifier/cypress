@@ -4,6 +4,7 @@ import $dom from '../../../dom'
 import $utils from '../../../cypress/utils'
 import $errUtils from '../../../cypress/error_utils'
 import $elements from '../../../dom/elements'
+import $selection from '../../../dom/selection'
 import type { Log } from '../../../cypress/log'
 
 interface InternalFocusOptions extends Partial<Cypress.Loggable & Cypress.Timeoutable> {
@@ -40,15 +41,14 @@ export default (Commands, Cypress, cy) => {
         options.$el = $dom.wrap(options.$el)
       }
 
-      if (options.log) {
-        options._log = Cypress.log({
-          $el: options.$el,
-          timeout: options.timeout,
-          consoleProps () {
-            return { 'Applied To': $dom.getElements(options.$el) }
-          },
-        })
-      }
+      options._log = Cypress.log({
+        $el: options.$el,
+        timeout: options.timeout,
+        hidden: options.log === false,
+        consoleProps () {
+          return { 'Applied To': $dom.getElements(options.$el) }
+        },
+      })
 
       const el = options.$el.get(0)
 
@@ -60,7 +60,7 @@ export default (Commands, Cypress, cy) => {
       $elements.isElement(options.$el.get(0)) &&
       $elements.isBody(options.$el.get(0))
 
-      // http://www.w3.org/$R/html5/editing.html#specially-focusable
+      // https://dev.w3.org/html5/spec-LC/editing.html#specially-focusable
       // ensure there is only 1 dom element in the subject
       // make sure its allowed to be focusable
       if (!(isWin || isBody || $dom.isFocusable(options.$el))) {
@@ -88,6 +88,18 @@ export default (Commands, Cypress, cy) => {
       }
 
       cy.fireFocus(el)
+
+      if (Cypress.isBrowser('webkit') && (
+        $elements.isInput(el) || $elements.isTextarea(el)
+      )) {
+        // Force selection to end in WebKit, unless selection
+        // has been set by user.
+        // It's a curried function, so the 2 arguments are valid.
+        // @ts-ignore
+        $selection.moveSelectionToEnd(el, {
+          onlyIfEmptySelection: true,
+        })
+      }
 
       const verifyAssertions = () => {
         return cy.verifyUpcomingAssertions(options.$el, options, {
@@ -121,19 +133,18 @@ export default (Commands, Cypress, cy) => {
 
       const isBody = options.$el.is('body')
 
-      if (options.log) {
-        // figure out the options which actually change the behavior of clicks
-        const deltaOptions = $utils.filterOutOptions(options)
+      // figure out the options which actually change the behavior of clicks
+      const deltaOptions = $utils.filterOutOptions(options)
 
-        options._log = Cypress.log({
-          $el: options.$el,
-          message: deltaOptions,
-          timeout: options.timeout,
-          consoleProps () {
-            return { 'Applied To': $dom.getElements(options.$el) }
-          },
-        })
-      }
+      options._log = Cypress.log({
+        $el: options.$el,
+        hidden: !options.log,
+        message: deltaOptions,
+        timeout: options.timeout,
+        consoleProps () {
+          return { 'Applied To': $dom.getElements(options.$el) }
+        },
+      })
 
       if (options.$el.length && options.$el.length > 1) {
         if (options.error === false) {

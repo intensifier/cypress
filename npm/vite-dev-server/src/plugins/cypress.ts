@@ -1,6 +1,5 @@
 import debugFn from 'debug'
-import { resolve } from 'pathe'
-import type { ModuleNode, Plugin, ViteDevServer } from 'vite'
+import type { ModuleNode, PluginOption, ViteDevServer } from 'vite-6'
 import type { Vite } from '../getVite'
 import { parse, HTMLElement } from 'node-html-parser'
 import fs from 'fs'
@@ -10,7 +9,7 @@ import path from 'path'
 
 const debug = debugFn('cypress:vite-dev-server:plugins:cypress')
 
-const INIT_FILEPATH = resolve(__dirname, '../../client/initCypressTests.js')
+const INIT_FILEPATH = path.resolve(__dirname, '../../client/initCypressTests.js')
 
 const HMR_DEPENDENCY_LOOKUP_MAX_ITERATION = 50
 
@@ -28,7 +27,7 @@ function getSpecsPathsSet (specs: Spec[]) {
 export const Cypress = (
   options: ViteDevServerConfig,
   vite: Vite,
-): Plugin => {
+): PluginOption => {
   let base = '/'
 
   const projectRoot = options.cypressConfig.projectRoot
@@ -43,7 +42,13 @@ export const Cypress = (
   // eslint-disable-next-line no-restricted-syntax
   let loader = fs.readFileSync(INIT_FILEPATH, 'utf8')
 
-  devServerEvents.on('dev-server:specs:changed', (specs: Spec[]) => {
+  devServerEvents.on('dev-server:specs:changed', ({ specs, options }: { specs: Spec[], options?: { neededForJustInTimeCompile: boolean }}) => {
+    if (options?.neededForJustInTimeCompile) {
+      // if an option is needed for just in time compile, no-op as this isn't supported in vite
+      return
+    }
+
+    debug(`dev-server:secs:changed: ${specs.map((spec) => spec.relative)}`)
     specsPathsSet = getSpecsPathsSet(specs)
   })
 
@@ -54,7 +59,7 @@ export const Cypress = (
       base = config.base
     },
     async transformIndexHtml (html) {
-      // it's possibe other plugins have modified the HTML
+      // it's possible other plugins have modified the HTML
       // before we get to. For example vitejs/plugin-react will
       // add a preamble. We do our best to look at the HTML we
       // receive and inject it.
@@ -66,7 +71,7 @@ export const Cypress = (
         return node instanceof HTMLElement && node.rawTagName === 'script'
       })
 
-      const indexHtmlPath = resolve(projectRoot, indexHtmlFile)
+      const indexHtmlPath = path.resolve(projectRoot, indexHtmlFile)
 
       debug('resolved the indexHtmlPath as', indexHtmlPath, 'from', indexHtmlFile)
 
@@ -94,13 +99,7 @@ export const Cypress = (
     },
     configureServer: async (server: ViteDevServer) => {
       server.middlewares.use(`${base}index.html`, async (req, res) => {
-        let transformedIndexHtml = await server.transformIndexHtml(base, '')
-        const viteImport = `<script type="module" src="${options.cypressConfig.devServerPublicPathRoute}/@vite/client"></script>`
-
-        // If we're doing cy-in-cy, we need to be able to access the Cypress instance from the parent frame.
-        if (process.env.CYPRESS_INTERNAL_VITE_OPEN_MODE_TESTING) {
-          transformedIndexHtml = transformedIndexHtml.replace(viteImport, `<script>document.domain = 'localhost';</script>${viteImport}`)
-        }
+        const transformedIndexHtml = await server.transformIndexHtml(base, '')
 
         return res.end(transformedIndexHtml)
       })
@@ -109,7 +108,7 @@ export const Cypress = (
       debug('handleHotUpdate - file', file)
 
       // If the user provided IndexHtml is changed, do a full-reload
-      if (vite.normalizePath(file) === resolve(projectRoot, indexHtmlFile)) {
+      if (vite.normalizePath(file) === path.resolve(projectRoot, indexHtmlFile)) {
         server.ws.send({
           type: 'full-reload',
         })
@@ -128,7 +127,7 @@ export const Cypress = (
         if (iterationNumber > HMR_DEPENDENCY_LOOKUP_MAX_ITERATION) {
           debug(`max hmr iteration reached: ${HMR_DEPENDENCY_LOOKUP_MAX_ITERATION}; Rerun will not happen on this file change.`)
 
-          return []
+          return
         }
 
         // as soon as we find one of the specs, we trigger the re-run of tests
@@ -140,7 +139,7 @@ export const Cypress = (
 
             // if we update support we know we have to re-run it all
             // no need to check further
-            return []
+            return
           }
 
           if (mod.file && specsPathsSet.has(mod.file)) {
@@ -157,7 +156,7 @@ export const Cypress = (
         iterationNumber += 1
       }
 
-      return []
+      return
     },
   }
 }

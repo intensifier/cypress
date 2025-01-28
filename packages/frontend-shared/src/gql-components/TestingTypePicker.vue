@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="props.gql.currentProject"
-    class="flex m-24px justify-center"
+    class="flex m-[24px] justify-center"
   >
     <Card
       v-for="tt in testingTypes"
@@ -9,12 +9,13 @@
       :data-cy-testingType="tt.key"
       :title="tt.name"
       :description="tt.description"
-      class="m-24px px-24px pt-36px pb-36px w-336px"
+      class="m-[24px] px-[24px] pt-[36px] pb-[36px] w-[336px]"
       :icon="tt.icon"
       :hover-icon="tt.iconSolid"
       :icon-size="64"
       :disabled="tt.status === 'disabled'"
       variant="jade"
+      :badge-text="tt.badgeText"
       @click="emits('pick', tt.key, currentTestingType)"
       @keyup.enter="emits('pick', tt.key, currentTestingType)"
       @keyup.space="emits('pick', tt.key, currentTestingType)"
@@ -34,7 +35,7 @@
       </template>
       <template #footer>
         <StatusBadge
-          class="mt-16px"
+          class="mt-[16px]"
           :title="t(`setupPage.testingCard.${tt.status}`)"
           :status="tt.status === 'configured' || tt.status === 'running'"
           @choose-a-browser="emits('pick', tt.key, currentTestingType)"
@@ -102,6 +103,7 @@ const testingTypes = computed(() => {
       icon: IconE2E,
       iconSolid: IconE2ESolid,
       status: e2eStatus.value,
+      badgeText: '',
     },
     {
       key: 'component',
@@ -110,6 +112,7 @@ const testingTypes = computed(() => {
       icon: IconComponent,
       iconSolid: IconComponentSolid,
       status: componentStatus.value,
+      badgeText: '',
     },
   ] as const
 })

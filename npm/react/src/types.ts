@@ -1,28 +1,14 @@
 import type React from 'react'
-import type { StyleOptions } from '@cypress/mount-utils'
 
 export interface UnmountArgs {
   log: boolean
   boundComponentMessage?: string
 }
 
-export interface InternalUnmountOptionsReact {
-  unmount: (el: HTMLElement) => boolean
-}
-
-export interface InternalUnmountOptionsReact18 {
-  unmount: () => boolean
-}
-
-export type InternalUnmountOptions =
-  InternalUnmountOptionsReact
-  | InternalUnmountOptionsReact18
-
-export type MountOptions = Partial<StyleOptions & MountReactComponentOptions>
+export type MountOptions = Partial<MountReactComponentOptions>
 
 export interface MountReactComponentOptions {
-  alias: string
-  ReactDom: typeof import('react-dom')
+  ReactDom: typeof import('react-dom/client')
   /**
    * Log the mounting command into Cypress Command Log,
    * true by default.
@@ -36,13 +22,14 @@ export interface MountReactComponentOptions {
 }
 
 export interface InternalMountOptions {
-  reactDom: typeof import('react-dom')
+  reactDom: typeof import('react-dom/client')
   render: (
     reactComponent: ReturnType<typeof React.createElement>,
     el: HTMLElement,
-    reactDomToUse: typeof import('react-dom')
+    reactDomToUse: typeof import('react-dom/client')
   ) => void
   unmount: (options: UnmountArgs) => void
+  cleanup: () => boolean
 
   // globalThis.Cypress.Chainable<MountReturn>
 }
@@ -57,10 +44,4 @@ export interface MountReturn {
    * or have asynchronous updates (`useEffect`, `useLayoutEffect`).
    */
   rerender: (component: React.ReactNode) => globalThis.Cypress.Chainable<MountReturn>
-  /**
-   * Removes the mounted component.
-   * @see `unmount`
-   */
-  // @ts-ignore
-  unmount: (payload: UnmountArgs) => void // globalThis.Cypress.Chainable<JQuery<HTMLElement>>
 }

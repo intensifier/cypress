@@ -26,9 +26,12 @@ function formChromeBetaAppPath () {
 }
 
 function formChromiumAppPath () {
-  const exe = 'C:/Program Files (x86)/Google/chrome-win32/chrome.exe'
-
-  return [normalize(exe)]
+  return [
+    'C:/Program Files (x86)/Google/chrome-win32/chrome.exe',
+    'C:/Program Files/Google/chrome-win/chrome.exe',
+    'C:/Program Files/Google/Chromium/chrome.exe',
+    'C:/Program Files (x86)/Google/Chromium/chrome.exe',
+  ].map(normalize)
 }
 
 function formChromeCanaryAppPath () {
@@ -44,6 +47,13 @@ function formChromeCanaryAppPath () {
   )
 
   return [normalize(exe)]
+}
+
+function formChromeForTestingAppPath () {
+  return [
+    'C:/Program Files/Google/Chrome for Testing/chrome.exe',
+    'C:/Program Files (x86)/Google/Chrome for Testing/chrome.exe',
+  ].map(normalize)
 }
 
 function getFirefoxPaths (editionFolder) {
@@ -91,6 +101,9 @@ const formPaths: WindowsBrowserPaths = {
     beta: formChromeBetaAppPath,
     canary: formChromeCanaryAppPath,
   },
+  'chrome-for-testing': {
+    stable: formChromeForTestingAppPath,
+  },
   chromium: {
     stable: formChromiumAppPath,
   },
@@ -106,10 +119,10 @@ const formPaths: WindowsBrowserPaths = {
     beta: () => {
       return [normalize('C:/Program Files (x86)/Microsoft/Edge Beta/Application/msedge.exe')]
     },
+    canary: formEdgeCanaryAppPath,
     dev: () => {
       return [normalize('C:/Program Files (x86)/Microsoft/Edge Dev/Application/msedge.exe')]
     },
-    canary: formEdgeCanaryAppPath,
   },
 }
 
@@ -139,9 +152,9 @@ function getWindowsBrowser (browser: Browser): Promise<FoundBrowser> {
         return tryNextExePath()
       }
 
-      // Use exports.getVersionString here, rather than our local reference
+      // Use module.exports.getVersionString here, rather than our local reference
       // to that variable so that the tests can easily mock it
-      return exports.getVersionString(path).then((version) => {
+      return module.exports.getVersionString(path).then((version) => {
         debug('got version string for %s: %o', browser.name, { exePath, version })
 
         return {

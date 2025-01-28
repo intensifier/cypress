@@ -1,22 +1,21 @@
 import $utils from '../../../cypress/utils'
 import $errUtils from '../../../cypress/error_utils'
-import { difference, isPlainObject, isString } from 'lodash'
+import { difference, isPlainObject, isString, isFunction } from 'lodash'
+import type { LocationObject } from '../../../cypress/location'
+import * as cors from '@packages/network/lib/cors'
+import { DocumentDomainInjection } from '@packages/network/lib/document-domain-injection'
 
 const validOptionKeys = Object.freeze(['args'])
 
 export class Validator {
   log: Cypress.Log
-  onFailure: () => {}
 
-  constructor ({ log, onFailure }) {
+  constructor ({ log }) {
     this.log = log
-    this.onFailure = onFailure
   }
 
   validate ({ callbackFn, options, urlOrDomain }) {
     if (!isString(urlOrDomain)) {
-      this.onFailure()
-
       $errUtils.throwErrByPath('origin.invalid_url_argument', {
         onFail: this.log,
         args: { arg: $utils.stringify(urlOrDomain) },
@@ -25,8 +24,6 @@ export class Validator {
 
     if (options) {
       if (!isPlainObject(options)) {
-        this.onFailure()
-
         $errUtils.throwErrByPath('origin.invalid_options_argument', {
           onFail: this.log,
           args: { arg: $utils.stringify(options) },
@@ -36,8 +33,6 @@ export class Validator {
       const extraneousKeys = difference(Object.keys(options), validOptionKeys)
 
       if (extraneousKeys.length) {
-        this.onFailure()
-
         $errUtils.throwErrByPath('origin.extraneous_options_argument', {
           onFail: this.log,
           args: {
@@ -48,9 +43,7 @@ export class Validator {
       }
     }
 
-    if (typeof callbackFn !== 'function') {
-      this.onFailure()
-
+    if (!this._isValidCallbackFn(callbackFn)) {
       $errUtils.throwErrByPath('origin.invalid_fn_argument', {
         onFail: this.log,
         args: { arg: $utils.stringify(callbackFn) },
@@ -58,14 +51,52 @@ export class Validator {
     }
   }
 
-  validateLocation (location, urlOrDomain) {
-    // we don't support query params
-    if (location.search.length > 0) {
-      this.onFailure()
+  _isValidCallbackFn (callbackFn) {
+    if (isFunction(callbackFn)) return true
 
+    // the user must pass a function, but at runtime the function may be
+    // replaced with an object in the form
+    // { callbackName: string, outputFilePath: string }
+    // by the webpack-preprocessor. if it doesn't have that form, it's
+    // an invalid input by the user
+    if (isPlainObject(callbackFn)) {
+      return (
+        Object.keys(callbackFn).length === 2
+        && isString(callbackFn.callbackName)
+        && isString(callbackFn.outputFilePath)
+      )
+    }
+
+    return false
+  }
+
+  /**
+   * Validates the location parameter of the cy.origin call.
+   * @param originLocation - the location passed into the cy.origin command.
+   * @param urlOrDomain - the original string param passed in.
+   * @param specHref - the address of the current spec.
+   */
+  validateLocation (originLocation: LocationObject, urlOrDomain: string, specHref: string): void {
+    // we don't support query params
+    if (originLocation.search.length > 0) {
       $errUtils.throwErrByPath('origin.invalid_url_argument', {
         onFail: this.log,
         args: { arg: $utils.stringify(urlOrDomain) },
+      })
+    }
+
+    const injector = DocumentDomainInjection.InjectionBehavior(Cypress.config())
+
+    const policy = cors.policyFromConfig({ injectDocumentDomain: Cypress.config('injectDocumentDomain') })
+
+    if (injector.urlsMatch(originLocation.href, specHref)) {
+      $errUtils.throwErrByPath('origin.invalid_url_argument_same_origin', {
+        onFail: this.log,
+        args: {
+          originUrl: $utils.stringify(urlOrDomain),
+          topOrigin: (window.location.origin),
+          policy,
+        },
       })
     }
   }

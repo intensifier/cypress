@@ -2,23 +2,31 @@ import { makeConfig } from '../frontend-shared/vite.config.mjs'
 import Layouts from 'vite-plugin-vue-layouts'
 import Pages from 'vite-plugin-pages'
 import Copy from 'rollup-plugin-copy'
+import Legacy from '@vitejs/plugin-legacy'
 import { resolve } from 'path'
 
 export default makeConfig({
   optimizeDeps: {
     include: [
-      '@urql/core',
-      'vue-i18n',
+      'javascript-time-ago',
+      'ansi-to-html',
+      'fuzzysort',
+      '@cypress-design/**',
+      '@cypress-design/vue-button',
+      'debug',
       'p-defer',
-      '@vue/test-utils',
-      'vue-router',
-      '@urql/devtools',
-      '@urql/exchange-graphcache',
-      'dayjs',
-      'dayjs/plugin/relativeTime',
-      'dayjs/plugin/duration',
+      'bluebird',
+      'events',
+      '@popperjs/core',
+      '@opentelemetry/*',
     ],
+    esbuildOptions: { 
+      target: "ES2022" 
+    }
   },
+  build: {
+    target: "ES2022"
+  }
 }, {
   plugins: [
     Layouts(),
@@ -28,6 +36,11 @@ export default makeConfig({
         src: resolve(__dirname, '../frontend-shared/src/assets/logos/favicon.png'),
         dest: 'dist',
       }],
+    }),
+    Legacy({
+      targets: ['last 3 major versions'],
+      modernPolyfills: true,
+      renderLegacyChunks: false,
     }),
   ],
 })

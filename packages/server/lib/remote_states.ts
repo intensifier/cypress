@@ -1,13 +1,31 @@
-import { cors } from '@packages/network'
-import origin from './util/origin'
+import { cors, uri } from '@packages/network'
 import Debug from 'debug'
 import _ from 'lodash'
-import type EventEmitter from 'events'
+import type { ParsedHostWithProtocolAndHost } from '@packages/network/lib/types'
+import type { DocumentDomainInjection } from '@packages/network'
 
-const DEFAULT_DOMAIN_NAME = 'localhost'
+export const DEFAULT_DOMAIN_NAME = 'localhost'
+
 const fullyQualifiedRe = /^https?:\/\//
 
 const debug = Debug('cypress:server:remote-states')
+
+export interface RemoteState {
+  auth?: {
+    username: string
+    password: string
+  }
+  domainName: string
+  strategy: 'file' | 'http'
+  origin: string
+  fileServer: string | null
+  props: ParsedHostWithProtocolAndHost | null
+}
+
+interface RemoteStatesServerPorts {
+  server: number
+  fileServer?: number
+}
 
 /**
  * Class to maintain and manage the remote states of the server.
@@ -39,25 +57,35 @@ const debug = Debug('cypress:server:remote-states')
  *     port: 443
  *     tld: "com"
  *     domain: "google"
+ *     protocol: "https"
  *   }
  * }
  */
 export class RemoteStates {
-  private remoteStates: Map<string, Cypress.RemoteState> = new Map()
-  private originStack: string[] = []
-  private configure: () => { serverPort: number, fileServerPort: number }
-  private _config: { serverPort: number, fileServerPort: number } | undefined
+  private remoteStates: Map<string, RemoteState> = new Map()
+  private primaryOriginKey: string = ''
+  private currentOriginKey: string = ''
+  private serverPorts?: RemoteStatesServerPorts
 
-  constructor (configure) {
-    this.configure = configure
+  constructor (
+    private configure: () => RemoteStatesServerPorts,
+    private documentDomainInjection: DocumentDomainInjection,
+  ) {
   }
 
   get (url: string) {
-    const state = this.remoteStates.get(cors.getOriginPolicy(url))
+    debug('get (origin key)', this.documentDomainInjection.getOrigin(url), this.remoteStates)
+    const state = this.remoteStates.get(this.documentDomainInjection.getOrigin(url))
 
     debug('getting remote state: %o for: %s', state, url)
 
     return _.cloneDeep(state)
+  }
+
+  hasPrimary () {
+    const remoteStates = Array.from(this.remoteStates.entries())
+
+    return !!(remoteStates.length && remoteStates[0] && remoteStates[0][1])
   }
 
   getPrimary () {
@@ -68,17 +96,8 @@ export class RemoteStates {
     return state
   }
 
-  isInOriginStack (url: string): boolean {
-    return this.originStack.includes(cors.getOriginPolicy(url))
-  }
-
-  isSecondaryOrigin (url: string): boolean {
-    // start at 1 to exclude the primary origin
-    return this.originStack.indexOf(cors.getOriginPolicy(url), 1) !== -1
-  }
-
-  isPrimaryOrigin (url: string): boolean {
-    return this.originStack[0] === cors.getOriginPolicy(url)
+  isPrimarySuperDomainOrigin (url: string): boolean {
+    return this.primaryOriginKey === this.documentDomainInjection.getOrigin(url)
   }
 
   reset () {
@@ -88,109 +107,69 @@ export class RemoteStates {
 
     // reset the remoteStates and originStack to the primary
     this.remoteStates = new Map(stateArray[0] ? [stateArray[0]] : [])
-    this.originStack = stateArray[0] ? [stateArray[0][0]] : []
+    this.currentOriginKey = this.primaryOriginKey
   }
 
-  current (): Cypress.RemoteState {
-    return this.get(this.originStack[this.originStack.length - 1]) as Cypress.RemoteState
+  current (): RemoteState {
+    return this.get(this.currentOriginKey) as RemoteState
   }
 
-  set (urlOrState: string | Cypress.RemoteState, options: { auth?: {}, isCrossOrigin?: boolean } = {}): Cypress.RemoteState {
-    let state
+  private _stateFromUrl (url: string): RemoteState {
+    const remoteOrigin = uri.origin(url)
+    const remoteProps = cors.parseUrlIntoHostProtocolDomainTldPort(remoteOrigin)
 
-    if (_.isString(urlOrState)) {
-      const remoteOrigin = origin(urlOrState)
-      const remoteProps = cors.parseUrlIntoDomainTldPort(remoteOrigin)
-
-      if ((urlOrState === '<root>') || !fullyQualifiedRe.test(urlOrState)) {
-        state = {
-          auth: options.auth,
-          origin: `http://${DEFAULT_DOMAIN_NAME}:${this.config.serverPort}`,
-          strategy: 'file',
-          fileServer: _.compact([`http://${DEFAULT_DOMAIN_NAME}`, this.config.fileServerPort]).join(':'),
-          domainName: DEFAULT_DOMAIN_NAME,
-          props: null,
-        }
-      } else {
-        state = {
-          auth: options.auth,
-          origin: remoteOrigin,
-          strategy: 'http',
-          fileServer: null,
-          domainName: cors.getDomainNameFromParsedHost(remoteProps),
-          props: remoteProps,
-        }
+    if ((url === '<root>') || !fullyQualifiedRe.test(url)) {
+      return {
+        origin: `http://${DEFAULT_DOMAIN_NAME}:${this.ports.server}`,
+        strategy: 'file',
+        fileServer: _.compact([`http://${DEFAULT_DOMAIN_NAME}`, this.ports.fileServer]).join(':'),
+        domainName: DEFAULT_DOMAIN_NAME,
+        props: null,
       }
-    } else {
-      state = urlOrState
     }
 
-    const remoteOriginPolicy = cors.getOriginPolicy(state.origin)
+    return {
+      origin: remoteOrigin,
+      strategy: 'http',
+      fileServer: null,
+      domainName: cors.getDomainNameFromParsedHost(remoteProps),
+      props: remoteProps,
+    }
+  }
 
-    if (options.isCrossOrigin) {
-      this.remoteStates.set(remoteOriginPolicy, state)
-    } else {
+  set (urlOrState: string | RemoteState, options: Pick<RemoteState, 'auth'> = { }, isPrimaryOrigin: boolean = true): RemoteState | undefined {
+    const state: RemoteState = _.isString(urlOrState) ?
+      {
+        ...this._stateFromUrl(urlOrState),
+        auth: options.auth,
+      } :
+      urlOrState
+
+    this.currentOriginKey = this.documentDomainInjection.getOrigin(state.origin)
+
+    if (isPrimaryOrigin) {
       // convert map to array
       const stateArray = Array.from(this.remoteStates.entries())
 
       // set the primary remote state and convert back to map
-      stateArray[0] = [remoteOriginPolicy, state]
+      stateArray[0] = [this.currentOriginKey, state]
       this.remoteStates = new Map(stateArray)
 
-      // automatically update the primary origin stack
-      this.originStack[0] = remoteOriginPolicy
+      this.primaryOriginKey = this.currentOriginKey
+    } else {
+      this.remoteStates.set(this.currentOriginKey, state)
     }
 
-    debug('setting remote state %o for %s', state, remoteOriginPolicy)
+    debug('setting remote state %o for %s', state, this.currentOriginKey)
 
-    return this.get(remoteOriginPolicy) as Cypress.RemoteState
+    return this.get(this.currentOriginKey)
   }
 
-  addEventListeners (eventEmitter: EventEmitter) {
-    eventEmitter.on('cross:origin:bridge:ready', ({ originPolicy }) => {
-      debug(`received cross:origin:bridge:ready, add origin ${originPolicy} to remote states`)
-
-      const existingOrigin = this.remoteStates.get(originPolicy)
-
-      // since this is just the cy.origin starting, we don't want to override
-      // the existing origin if it already exists
-      if (!existingOrigin) {
-        this.set(originPolicy, { isCrossOrigin: true })
-      }
-
-      this.addOrigin(originPolicy)
-    })
-
-    eventEmitter.on('cross:origin:finished', (originPolicy) => {
-      debug(`received cross:origin:finished, remove ${originPolicy} from origin stack`)
-
-      this.removeCurrentOrigin(originPolicy)
-    })
-  }
-
-  private get config () {
-    if (!this._config) {
-      this._config = this.configure()
+  private get ports () {
+    if (!this.serverPorts) {
+      this.serverPorts = this.configure()
     }
 
-    return this._config
-  }
-
-  private addOrigin (originPolicy) {
-    this.originStack.push(originPolicy)
-
-    debug('added origin: ', originPolicy)
-  }
-
-  private removeCurrentOrigin (originPolicy) {
-    const currentOriginPolicy = this.originStack[this.originStack.length - 1]
-
-    if (originPolicy !== currentOriginPolicy) {
-      throw new Error(`Tried to remove origin ${originPolicy} but ${currentOriginPolicy} was found. This should never happen and likely is a bug. Please open an issue.`)
-    }
-
-    this.originStack.pop()
-
-    debug('removed current origin: ', originPolicy)
+    return this.serverPorts
   }
 }

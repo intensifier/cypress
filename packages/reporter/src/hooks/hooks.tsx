@@ -2,15 +2,16 @@ import cs from 'classnames'
 import _ from 'lodash'
 import { observer } from 'mobx-react'
 import React from 'react'
-import { FileDetails } from '@packages/types'
+import type { FileDetails } from '@packages/types'
 
 import appState, { AppState } from '../lib/app-state'
 import Command from '../commands/command'
 import Collapsible from '../collapsible/collapsible'
-import HookModel, { HookName } from './hook-model'
+import type HookModel from './hook-model'
+import type { HookName } from './hook-model'
 
-import ArrowRightIcon from '-!react-svg-loader!@packages/frontend-shared/src/assets/icons/arrow-right_x16.svg'
-import OpenIcon from '-!react-svg-loader!@packages/frontend-shared/src/assets/icons/technology-code-editor_x16.svg'
+import ArrowRightIcon from '@packages/frontend-shared/src/assets/icons/arrow-right_x16.svg'
+import OpenIcon from '@packages/frontend-shared/src/assets/icons/technology-code-editor_x16.svg'
 import OpenFileInIDE from '../lib/open-file-in-ide'
 
 export interface HookHeaderProps {
@@ -19,7 +20,7 @@ export interface HookHeaderProps {
 }
 
 const HookHeader = ({ model, number }: HookHeaderProps) => (
-  <span className='hook-name'>
+  <span className='hook-name' data-cy={`hook-name-${model.hookName}`}>
     {model.hookName} {number && `(${number})`}
     {model.failed && <span className='hook-failed-message'> (failed)</span>}
   </span>
@@ -66,7 +67,7 @@ const Hook = observer(({ model, showNumber }: HookProps) => (
     <Collapsible
       header={<HookHeader model={model} number={showNumber ? model.hookNumber : undefined} />}
       headerClass='hook-header'
-      headerExtras={model.invocationDetails && <HookOpenInIDE invocationDetails={model.invocationDetails} />}
+      headerExtras={model.invocationDetails && Cypress.testingType !== 'component' && <HookOpenInIDE invocationDetails={model.invocationDetails} />}
       isOpen
     >
       <ul className='commands-container'>

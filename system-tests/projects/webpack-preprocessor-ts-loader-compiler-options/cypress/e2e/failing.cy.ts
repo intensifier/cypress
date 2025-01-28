@@ -21,14 +21,14 @@ context('validation errors', function () {
     Cypress.config('isInteractive', true)
   })
 
-  fail(this, () => {
+  fail('validation error', this, () => {
     // @ts-ignore
     cy.viewport()
   })
 
-  verify(this, {
-    line: 26,
-    column: 8,
+  verify('validation error', this, {
+    line: 19,
+    isPreprocessorWithTypescript: true,
     message: 'can only accept a string preset or',
     stack: ['throwErrBadArgs', 'From Your Spec Code:'],
   })

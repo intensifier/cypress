@@ -1,54 +1,32 @@
-import { initial, initialCT, session, sessionLifecycle, visitFailure } from './Blank'
+import { initial, testIsolationBlankPage, visitFailure } from './Blank'
 import { getContainerEl } from '@cypress/mount-utils'
 
-describe('initial - e2e', () => {
+describe('initial', () => {
   beforeEach(() => {
     getContainerEl()!.innerHTML = initial()
   })
 
   it('works', () => {
-    cy.percySnapshot()
-  })
+    cy.get('[data-cy="cypress-logo"]')
 
-  it('links to docs', () => {
-    cy.contains('cy.visit').should('have.attr', 'href', 'https://on.cypress.io/visit')
+    cy.percySnapshot()
   })
 })
 
-describe('initial - ct', () => {
-  it('works', () => {
-    getContainerEl()!.innerHTML = initialCT()
-
-    cy.percySnapshot()
+describe('testIsolationBlankPage', () => {
+  beforeEach(() => {
+    getContainerEl()!.innerHTML = testIsolationBlankPage()
+    cy.get('[data-cy="cypress-logo"]')
+    cy.get('[data-cy="text"]').should('have.text', 'Default blank page')
+    cy.get('[data-cy="subtext"]').should('have.text', 'This page was cleared by navigating to about:blank.All active session data (cookies, localStorage and sessionStorage) across all domains are cleared.')
   })
 
-  it('links to docs', () => {
-    getContainerEl()!.innerHTML = initialCT()
-
-    cy.contains('mount').should('have.attr', 'href', 'https://on.cypress.io/mount')
+  it('works', () => {
+    cy.percySnapshot()
   })
 
   it('works with small viewport', () => {
-    cy.viewport(200, 1000)
-    getContainerEl()!.innerHTML = initial()
-
-    cy.percySnapshot()
-  })
-})
-
-describe('session', () => {
-  it('works', () => {
-    getContainerEl()!.innerHTML = session()
-
-    cy.percySnapshot()
-  })
-})
-
-describe('sessionLifecycle', () => {
-  it('works', () => {
-    getContainerEl()!.innerHTML = sessionLifecycle()
-
-    cy.get('.warn').contains('experimentalSessionAndOrigin')
+    cy.viewport(200, 500)
 
     cy.percySnapshot()
   })
@@ -57,12 +35,14 @@ describe('sessionLifecycle', () => {
 describe('visitFailure', () => {
   it('works', () => {
     getContainerEl()!.innerHTML = visitFailure({ url: 'http://foo.cypress.io' })
-
-    cy.percySnapshot()
   })
 
   it('works with details', () => {
     getContainerEl()!.innerHTML = visitFailure({ url: 'http://foo.cypress.io', status: 404, statusText: 'Not Found', contentType: 'text/html' })
+
+    cy.get('p').contains('Sorry, we could not load:')
+    cy.get('a').contains('http://foo.cypress.io').should('have.attr', 'href', 'http://foo.cypress.io')
+    cy.get('p').contains('404 - Not Found (text/html)')
 
     cy.percySnapshot()
   })
