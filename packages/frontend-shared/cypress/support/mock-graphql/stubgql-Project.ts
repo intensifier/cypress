@@ -29,6 +29,7 @@ export const createTestCurrentProject = (title: string, currentProject: Partial<
   return {
     ...globalProject,
     __typename: 'CurrentProject',
+    savedState: {},
     isCTConfigured: true,
     serveConfig: {},
     isE2EConfigured: true,
@@ -45,6 +46,11 @@ export const createTestCurrentProject = (title: string, currentProject: Partial<
     ],
     config,
     cloudProject: CloudProjectStubs.componentProject,
+    codeGenGlobs: {
+      id: 'super-unique-id',
+      __typename: 'CodeGenGlobs',
+      component: '**/*.vue',
+    },
     activeBrowser: stubBrowsers[0],
     browsers: stubBrowsers,
     isDefaultSpecPattern: true,

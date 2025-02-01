@@ -1,7 +1,7 @@
 /// <reference types="cypress" />
-import Comp from './comp.jsx'
+import { Comp } from './comp.jsx'
 import React from 'react'
-import { mount, unmount } from '@cypress/react'
+import { mount } from '@cypress/react'
 
 it('calls callbacks on mount and unmount', () => {
   const onMount = cy.stub()
@@ -11,13 +11,14 @@ it('calls callbacks on mount and unmount', () => {
   mount(<Comp onMount={onMount} onUnmount={onUnmount} />)
   cy.then(() => {
     expect(onMount).to.have.been.calledOnce
-    expect(onUnmount).to.have.not.been.called
   })
 
   cy.contains('Component with').should('be.visible')
-  unmount().then(() => {
+
+  // mount something else to trigger unmount
+  mount(<div/>)
+
+  cy.then(() => {
     expect(onUnmount).to.have.been.calledOnce
   })
-
-  cy.contains('Component with').should('not.exist')
 })

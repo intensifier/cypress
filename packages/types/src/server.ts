@@ -1,16 +1,34 @@
 import type { FoundBrowser } from './browser'
+import type { ReceivedCypressOptions } from './config'
 import type { PlatformName } from './platform'
+import type { RunModeVideoApi } from './video'
+import type { ProtocolManagerShape } from './protocol'
+import type Protocol from 'devtools-protocol'
 
-export interface LaunchOpts {
-  browser?: FoundBrowser
-  url?: string
-  automationMiddleware?: AutomationMiddleware
-  projectRoot?: string
-  shouldLaunchNewTab?: boolean
+export type OpenProjectLaunchOpts = {
+  projectRoot: string
+  shouldLaunchNewTab: boolean
+  automationMiddleware: AutomationMiddleware
+  videoApi?: RunModeVideoApi
+  onWarning: (err: Error) => void
+  onError: (err: Error) => void
+  protocolManager?: ProtocolManagerShape
+}
+
+export type BrowserLaunchOpts = {
+  browsers: FoundBrowser[]
+  browser: FoundBrowser & { isHeadless: boolean }
+  url: string | undefined
+  proxyServer: string
+  isTextTerminal: boolean
   onBrowserClose?: (...args: unknown[]) => void
   onBrowserOpen?: (...args: unknown[]) => void
-  onError?: (err: Error) => void
-}
+  relaunchBrowser?: () => Promise<any>
+  protocolManager?: ProtocolManagerShape
+} & Partial<OpenProjectLaunchOpts> // TODO: remove the `Partial` here by making it impossible for openProject.launch to be called w/o OpenProjectLaunchOpts
+& Pick<ReceivedCypressOptions, 'userAgent' | 'proxyUrl' | 'socketIoRoute' | 'chromeWebSecurity' | 'downloadsFolder' | 'experimentalModifyObstructiveThirdPartyCode' | 'experimentalWebKitSupport'>
+
+export type BrowserNewTabOpts = { onInitializeNewBrowserTab: () => void } & BrowserLaunchOpts
 
 export interface LaunchArgs {
   _: [string] // Cypress App binary location
@@ -33,6 +51,7 @@ export interface LaunchArgs {
   onError?: (error: Error) => void
   os: PlatformName
   exit?: boolean
+  runnerUi?: boolean
 
   onFocusTests?: () => any
 }
@@ -41,12 +60,18 @@ type NullableMiddlewareHook = (() => void) | null
 
 export type OnRequestEvent = (eventName: string, data: any) => void
 
+export type OnServiceWorkerRegistrationUpdated = (data: Protocol.ServiceWorker.WorkerRegistrationUpdatedEvent) => void
+
+export type OnServiceWorkerVersionUpdated = (data: Protocol.ServiceWorker.WorkerVersionUpdatedEvent) => void
+
+export type OnServiceWorkerClientSideRegistrationUpdated = (data: { scriptURL: string, initiatorOrigin: string }) => void
+
 export interface AutomationMiddleware {
   onPush?: NullableMiddlewareHook
   onBeforeRequest?: OnRequestEvent | null
   onRequest?: OnRequestEvent | null
   onResponse?: NullableMiddlewareHook
-  onAfterResponse?: NullableMiddlewareHook
+  onAfterResponse?: ((eventName: string, data: any, resp: any) => void) | null
 }
 
 type WebSocketOptionsCallback = (...args: any[]) => any
@@ -75,6 +100,9 @@ export interface OpenProjectLaunchOptions {
   onSavedStateChanged?: WebSocketOptionsCallback
   onChange?: WebSocketOptionsCallback
   onError?: (err: Error) => void
+
+  // Manager used to communicate with the Cloud protocol
+  protocolManager?: ProtocolManagerShape
 
   [key: string]: any
 }

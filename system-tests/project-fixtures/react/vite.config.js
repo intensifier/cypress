@@ -1,5 +1,7 @@
-const {defineConfig} = require('vite')
+const { defineConfig } = require('vite')
+const react = require('@vitejs/plugin-react')
 
 module.exports = defineConfig({
-  logLevel: 'silent'
+  logLevel: 'silent',
+  plugins: [react({ jsxRuntime: 'classic' })],
 })

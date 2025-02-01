@@ -111,8 +111,6 @@ describe('Launchpad: Global Mode', () => {
       const projectList = ['todos', 'ids', 'cookies', 'plugin-empty']
 
       setupAndValidateProjectsList(projectList)
-
-      cy.percySnapshot()
     })
 
     it('takes user to the next step when clicking on a project card', () => {
@@ -183,6 +181,12 @@ describe('Launchpad: Global Mode', () => {
         })
       }
 
+      const waitForConfigLoad = () => {
+        cy.contains('Initializing config...').should('be.visible')
+        // ensure the config is fully loaded before clicking the breadcrumb back
+        cy.contains('Initializing config...').should('not.exist')
+      }
+
       const projectList = ['todos']
 
       setupAndValidateProjectsList(projectList)
@@ -196,6 +200,7 @@ describe('Launchpad: Global Mode', () => {
       // Component testing breadcrumbs
       cy.get('[data-cy="project-card"]').contains('todos').click()
       cy.get('[data-cy-testingtype="component"]').click()
+      waitForConfigLoad()
       resetSpies()
       getBreadcrumbLink('Projects').click()
       getBreadcrumbLink('Projects', { disabled: true })
@@ -208,6 +213,7 @@ describe('Launchpad: Global Mode', () => {
       cy.get('[data-cy="project-card"]').contains('todos').click()
       cy.get('[data-cy-testingtype="e2e"]').click()
       cy.contains('li', 'e2e testing', { matchCase: false }).should('not.have.attr', 'href')
+      waitForConfigLoad()
       resetSpies()
       getBreadcrumbLink('Projects').click()
       getBreadcrumbLink('Projects', { disabled: true })
@@ -221,21 +227,21 @@ describe('Launchpad: Global Mode', () => {
       it('can be opened', () => {
         setupAndValidateProjectsList(['todos'])
         cy.log('Project cards have a menu can be opened')
-        cy.get('[aria-label="Project Actions"]').click()
-        cy.get('[data-cy="Remove Project"]').contains(defaultMessages.globalPage.removeProject)
-        cy.get('[data-cy="Open In IDE"]').contains(defaultMessages.globalPage.openInIDE)
-        cy.get('[data-cy="Open In Finder"]').contains(defaultMessages.globalPage.openInFinder)
+        cy.get('[aria-label="Project actions"]').click()
+        cy.get('[data-cy="Remove project"]').contains(defaultMessages.globalPage.removeProject)
+        cy.get('[data-cy="Open in IDE"]').contains(defaultMessages.globalPage.openInIDE)
+        cy.get('[data-cy="Open in Finder"]').contains(defaultMessages.globalPage.openInFinder)
       })
 
-      it('removes project from list when clicking "Remove Project" menu item', () => {
+      it('removes project from list when clicking "Remove project" menu item', () => {
         const projectList = ['todos', 'cookies']
 
         setupAndValidateProjectsList(projectList)
-        cy.get('[aria-label="Project Actions"]').then((menu) => {
+        cy.get('[aria-label="Project actions"]').then((menu) => {
           menu.get(0).click()
         })
 
-        cy.get('[data-cy="Remove Project"]').click()
+        cy.get('[data-cy="Remove project"]').click()
 
         cy.get('[data-cy="project-card"]')
         .should('have.length', 1)
@@ -246,16 +252,16 @@ describe('Launchpad: Global Mode', () => {
         const projectList = ['todos']
 
         setupAndValidateProjectsList(projectList)
-        cy.get('[aria-label="Project Actions"]').click()
+        cy.get('[aria-label="Project actions"]').click()
 
-        cy.get('[data-cy="Open In IDE"]').click()
-        cy.contains('External Editor Preferences')
+        cy.get('[data-cy="Open in IDE"]').click()
+        cy.contains('External editor preferences')
       })
 
-      it('shows file drop zone when no more projects are in list when clicking "Remove Project" menu item', () => {
+      it('shows file drop zone when no more projects are in list when clicking "Remove project" menu item', () => {
         setupAndValidateProjectsList(['todos'])
-        cy.get('[aria-label="Project Actions"]').click()
-        cy.get('[data-cy="Remove Project"]').click()
+        cy.get('[aria-label="Project actions"]').click()
+        cy.get('[data-cy="Remove project"]').click()
 
         cy.get('[data-cy="project-card"]').should('not.exist')
         cy.get('[data-cy="dropzone"]')
@@ -281,17 +287,6 @@ describe('Launchpad: Global Mode', () => {
         .should('have.length', projectList.length)
       })
 
-      // FIXME: fix Search by project path logic - https://cypress-io.atlassian.net/browse/UNIFY-646
-      it.skip('filters project results when searching by project path', () => {
-        setupAndValidateProjectsList(projectList)
-        cy.get('#project-search').type('packages')
-        cy.get('[data-cy="project-card"')
-        .should('have.length', projectList.length)
-
-        cy.get('#project-search').type(`${path.sep}todos`)
-        cy.contains(defaultMessages.globalPage.noResultsMessage)
-      })
-
       it('shows "empty results" pages when searching for a non-existent name', () => {
         setupAndValidateProjectsList(projectList)
         cy.get('#project-search').type('hi')
@@ -304,17 +299,6 @@ describe('Launchpad: Global Mode', () => {
         cy.get('[data-cy="no-results-clear"]').click()
         cy.get('[data-cy="project-card"]')
         .should('have.length', projectList.length)
-      })
-
-      // FIXME: fix Search by project path logic - https://cypress-io.atlassian.net/browse/UNIFY-646
-      it.skip('shows "empty results" pages when searching for a non-existent path', () => {
-        setupAndValidateProjectsList(projectList)
-        cy.get('#project-search').type('packages')
-        cy.get('[data-cy="project-card"')
-        .should('have.length', projectList.length)
-
-        cy.get('#project-search').type(`${path.sep}random`)
-        cy.contains(defaultMessages.globalPage.noResultsMessage)
       })
     })
   })

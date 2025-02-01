@@ -180,18 +180,6 @@ describe('e2e config', () => {
     })
   })
 
-  it('throws an error if experimentalSessionAndOrigin is set on the component level', async function () {
-    await Fixtures.scaffoldProject('invalid-root-level-config')
-
-    return systemTests.exec(this, {
-      project: 'invalid-root-level-config',
-      configFile: 'invalid-component-experimentalSessionAndOrigin-config.js',
-      testingType: 'component',
-      expectedExitCode: 1,
-      snapshot: true,
-    })
-  })
-
   it('throws an error if indexHtml is set on the root level', async function () {
     await Fixtures.scaffoldProject('invalid-root-level-config')
 
@@ -253,6 +241,19 @@ describe('e2e config', () => {
     return systemTests.exec(this, {
       project: 'project-with-(glob)-[chars]',
       snapshot: true,
+    })
+  })
+
+  it('launches browser using config.defaultBrowser', async function () {
+    await Fixtures.scaffoldProject('config-defaultBrowser')
+
+    return systemTests.exec(this, {
+      project: 'config-defaultBrowser',
+      command: 'cypress',
+      args: ['run', '--dev', '--project', path.resolve(process.cwd(), './projects/config-defaultBrowser')],
+      onStdout: (stdout) => {
+        expect(stdout).to.include('Browser:        Chrome')
+      },
     })
   })
 })

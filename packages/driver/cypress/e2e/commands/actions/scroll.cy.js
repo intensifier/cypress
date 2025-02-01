@@ -27,6 +27,16 @@ describe('src/cy/commands/actions/scroll', () => {
 
       this.scrollBoth.scrollTop = 0
       this.scrollBoth.scrollLeft = 0
+
+      // width or height of DOM in pixels
+      this.scrollableContainerWidthHeight = 500
+      this.elementWidthHeight = 100
+      this.scrollBarWidthHeight = 15
+
+      // divide by 2 to get the center
+      // browsers round up the pixel value so we need to round it
+      this.halfScroll = Math.round((this.scrollableContainerWidthHeight - this.elementWidthHeight) / 2)
+      this.fullScroll = Math.round(this.scrollableContainerWidthHeight - this.elementWidthHeight)
     })
 
     describe('subject', () => {
@@ -44,7 +54,9 @@ describe('src/cy/commands/actions/scroll', () => {
 
       it('can use window', () => {
         cy.window().scrollTo('10px').then((win) => {
-          expect(win.scrollX).to.eq(10)
+          // Firefox doesn't round this number like other browsers
+          // So we round in the test to get consistent results here
+          expect(Math.round(win.scrollX)).to.eq(10)
         })
       })
 
@@ -82,11 +94,10 @@ describe('src/cy/commands/actions/scroll', () => {
         expect(this.scrollHoriz.get(0).scrollLeft).to.eq(0)
 
         cy.get('#scroll-to-horizontal').scrollTo('50%').then(function () {
-          // they don't calculate the height of the container
-          // in the percentage of the scroll (since going the height
-          // of the container wouldn't scroll at all...)
           expect(this.scrollHoriz.get(0).scrollTop).to.eq(0)
-          expect(this.scrollHoriz.get(0).scrollLeft).to.eq((500 - 100) / 2)
+          // since there is no veritical scrollbar to take into account
+          // this is just half of the basic width
+          expect(this.scrollHoriz.get(0).scrollLeft).to.eq(this.halfScroll)
         })
       })
     })
@@ -108,7 +119,7 @@ describe('src/cy/commands/actions/scroll', () => {
 
         cy.get('#scroll-to-both').scrollTo('top').then(function () {
           expect(this.scrollBoth.get(0).scrollTop).to.eq(0)
-          expect(this.scrollBoth.get(0).scrollLeft).to.eq((500 - 100) / 2)
+          expect(this.scrollBoth.get(0).scrollLeft).to.eq(this.halfScroll)
         })
       })
 
@@ -118,7 +129,7 @@ describe('src/cy/commands/actions/scroll', () => {
 
         cy.get('#scroll-to-both').scrollTo('topRight').then(function () {
           expect(this.scrollBoth.get(0).scrollTop).to.eq(0)
-          expect(this.scrollBoth.get(0).scrollLeft).to.eq((500 - 100))
+          expect(this.scrollBoth.get(0).scrollLeft).to.eq(this.fullScroll)
         })
       })
 
@@ -127,7 +138,7 @@ describe('src/cy/commands/actions/scroll', () => {
         expect(this.scrollBoth.get(0).scrollLeft).to.eq(0)
 
         cy.get('#scroll-to-both').scrollTo('left').then(function () {
-          expect(this.scrollBoth.get(0).scrollTop).to.eq((500 - 100) / 2)
+          expect(this.scrollBoth.get(0).scrollTop).to.eq(this.halfScroll)
           expect(this.scrollBoth.get(0).scrollLeft).to.eq(0)
         })
       })
@@ -137,8 +148,8 @@ describe('src/cy/commands/actions/scroll', () => {
         expect(this.scrollBoth.get(0).scrollLeft).to.eq(0)
 
         cy.get('#scroll-to-both').scrollTo('center').then(function () {
-          expect(this.scrollBoth.get(0).scrollTop).to.eq((500 - 100) / 2)
-          expect(this.scrollBoth.get(0).scrollLeft).to.eq((500 - 100) / 2)
+          expect(this.scrollBoth.get(0).scrollTop).to.eq(this.halfScroll)
+          expect(this.scrollBoth.get(0).scrollLeft).to.eq(this.halfScroll)
         })
       })
 
@@ -147,8 +158,8 @@ describe('src/cy/commands/actions/scroll', () => {
         expect(this.scrollBoth.get(0).scrollLeft).to.eq(0)
 
         cy.get('#scroll-to-both').scrollTo('right').then(function () {
-          expect(this.scrollBoth.get(0).scrollTop).to.eq((500 - 100) / 2)
-          expect(this.scrollBoth.get(0).scrollLeft).to.eq((500 - 100))
+          expect(this.scrollBoth.get(0).scrollTop).to.eq(this.halfScroll)
+          expect(this.scrollBoth.get(0).scrollLeft).to.eq((this.fullScroll))
         })
       })
 
@@ -157,7 +168,7 @@ describe('src/cy/commands/actions/scroll', () => {
         expect(this.scrollBoth.get(0).scrollLeft).to.eq(0)
 
         cy.get('#scroll-to-both').scrollTo('bottomLeft').then(function () {
-          expect(this.scrollBoth.get(0).scrollTop).to.eq((500 - 100))
+          expect(this.scrollBoth.get(0).scrollTop).to.eq((this.fullScroll))
           expect(this.scrollBoth.get(0).scrollLeft).to.eq(0)
         })
       })
@@ -167,8 +178,8 @@ describe('src/cy/commands/actions/scroll', () => {
         expect(this.scrollBoth.get(0).scrollLeft).to.eq(0)
 
         cy.get('#scroll-to-both').scrollTo('bottom').then(function () {
-          expect(this.scrollBoth.get(0).scrollTop).to.eq((500 - 100))
-          expect(this.scrollBoth.get(0).scrollLeft).to.eq((500 - 100) / 2)
+          expect(this.scrollBoth.get(0).scrollTop).to.eq((this.fullScroll))
+          expect(this.scrollBoth.get(0).scrollLeft).to.eq(this.halfScroll)
         })
       })
 
@@ -177,8 +188,8 @@ describe('src/cy/commands/actions/scroll', () => {
         expect(this.scrollBoth.get(0).scrollLeft).to.eq(0)
 
         cy.get('#scroll-to-both').scrollTo('bottomRight').then(function () {
-          expect(this.scrollBoth.get(0).scrollTop).to.eq((500 - 100))
-          expect(this.scrollBoth.get(0).scrollLeft).to.eq((500 - 100))
+          expect(this.scrollBoth.get(0).scrollTop).to.eq((this.fullScroll))
+          expect(this.scrollBoth.get(0).scrollLeft).to.eq((this.fullScroll))
         })
       })
     })
@@ -229,8 +240,8 @@ describe('src/cy/commands/actions/scroll', () => {
         expect(this.scrollBoth.get(0).scrollLeft).to.eq(0)
 
         cy.get('#scroll-to-both').scrollTo('50%', '50%').then(function () {
-          expect(this.scrollBoth.get(0).scrollTop).to.eq((500 - 100) / 2)
-          expect(this.scrollBoth.get(0).scrollLeft).to.eq((500 - 100) / 2)
+          expect(this.scrollBoth.get(0).scrollTop).to.eq(this.halfScroll)
+          expect(this.scrollBoth.get(0).scrollLeft).to.eq(this.halfScroll)
         })
       })
 
@@ -239,7 +250,7 @@ describe('src/cy/commands/actions/scroll', () => {
         expect(this.scrollBoth.get(0).scrollLeft).to.eq(0)
 
         cy.get('#scroll-to-both').scrollTo('0%', '50%').then(function () {
-          expect(this.scrollBoth.get(0).scrollTop).to.eq((500 - 100) / 2)
+          expect(this.scrollBoth.get(0).scrollTop).to.eq(this.halfScroll)
           expect(this.scrollBoth.get(0).scrollLeft).to.eq(0)
         })
       })
@@ -250,7 +261,7 @@ describe('src/cy/commands/actions/scroll', () => {
 
         cy.get('#scroll-to-both').scrollTo('50%', '0%').then(function () {
           expect(this.scrollBoth.get(0).scrollTop).to.eq(0)
-          expect(this.scrollBoth.get(0).scrollLeft).to.eq((500 - 100) / 2)
+          expect(this.scrollBoth.get(0).scrollLeft).to.eq(this.halfScroll)
         })
       })
     })
@@ -323,7 +334,7 @@ describe('src/cy/commands/actions/scroll', () => {
       })
 
       it('retries until element is scrollable', () => {
-        const $container = cy.$$('#nonscroll-becomes-scrollable')
+        let $container = cy.$$('#nonscroll-becomes-scrollable')
 
         expect($container.get(0).scrollTop).to.eq(0)
         expect($container.get(0).scrollLeft).to.eq(0)
@@ -331,6 +342,11 @@ describe('src/cy/commands/actions/scroll', () => {
         let retried = false
 
         cy.on('command:retry', _.after(2, () => {
+          // Replacing the element with itself to ensure that .scrollTo() is requerying the DOM
+          // as necessary
+          $container.replaceWith($container[0].outerHTML)
+          $container = cy.$$('#nonscroll-becomes-scrollable')
+
           $container.css('overflow', 'scroll')
           retried = true
         }))
@@ -344,13 +360,9 @@ describe('src/cy/commands/actions/scroll', () => {
 
       // https://github.com/cypress-io/cypress/issues/1924
       it('skips scrollability check', () => {
-        const scrollTo = cy.spy($.fn, 'scrollTo')
-
         cy.get('button:first').scrollTo('bottom', { ensureScrollable: false }).then(() => {
-          cy.stub(cy, 'ensureScrollability')
-
-          expect(scrollTo).to.be.calledWithMatch({}, { ensureScrollable: false })
-          expect(cy.ensureScrollability).not.to.be.called
+          cy.stub(Cypress.ensure, 'isScrollable')
+          expect(Cypress.ensure.isScrollable).not.to.be.called
         })
       })
     })
@@ -385,17 +397,17 @@ describe('src/cy/commands/actions/scroll', () => {
       })
 
       it('waits until the subject is scrollable', () => {
-        cy.stub(cy, 'ensureScrollability')
+        cy.stub(Cypress.ensure, 'isScrollable')
         .onFirstCall().throws(new Error())
 
         cy.on('command:retry', () => {
-          return cy.ensureScrollability.returns()
+          return Cypress.ensure.isScrollable.returns()
         })
 
         cy
         .get('#scroll-into-view-horizontal')
         .scrollTo('right').then(() => {
-          expect(cy.ensureScrollability).to.be.calledTwice
+          expect(Cypress.ensure.isScrollable).to.be.calledTwice
         })
       })
     })
@@ -430,7 +442,7 @@ describe('src/cy/commands/actions/scroll', () => {
       context('subject errors', () => {
         it('throws when not passed DOM element as subject', (done) => {
           cy.on('fail', (err) => {
-            expect(err.message).to.include('`cy.scrollTo()` failed because it requires a DOM element.')
+            expect(err.message).to.include('`cy.scrollTo()` failed because it requires a DOM element or window.')
             expect(err.message).to.include('{foo: bar}')
             expect(err.message).to.include('> `cy.noop()`')
 
@@ -449,6 +461,17 @@ describe('src/cy/commands/actions/scroll', () => {
           })
 
           cy.get('button').scrollTo('500px')
+        })
+
+        it('throws if subject disappears while waiting for scrollability', (done) => {
+          cy.on('command:retry', () => cy.$$('#nonscroll-becomes-scrollable').remove())
+
+          cy.on('fail', (err) => {
+            expect(err.message).to.include('`cy.scrollTo()` failed because the page updated')
+            done()
+          })
+
+          cy.get('#nonscroll-becomes-scrollable').scrollTo(500, 300)
         })
       })
 
@@ -546,6 +569,39 @@ describe('src/cy/commands/actions/scroll', () => {
         return null
       })
 
+      it('can turn off logging when protocol is disabled', { protocolEnabled: false }, function () {
+        cy.on('_log:added', (attrs, log) => {
+          this.hiddenLog = log
+        })
+
+        cy.get('#scroll-to-both').scrollTo(25, 0, { log: false })
+
+        cy.then(function () {
+          const { lastLog, hiddenLog } = this
+
+          expect(lastLog.get('name'), 'log name').to.not.eq('scrollTo')
+          expect(hiddenLog).to.be.undefined
+        })
+      })
+
+      it('can send hidden log when protocol is enabled', { protocolEnabled: true }, function () {
+        cy.on('_log:added', (attrs, log) => {
+          this.hiddenLog = log
+        })
+
+        cy.get('#scroll-to-both').scrollTo(25, 0, { log: false })
+
+        cy.then(function () {
+          const { lastLog, hiddenLog } = this
+
+          expect(lastLog.get('name'), 'log name').to.not.eq('scrollTo')
+
+          expect(hiddenLog.get('name'), 'log name').to.eq('scrollTo')
+          expect(hiddenLog.get('hidden'), 'log hidden').to.be.true
+          expect(hiddenLog.get('snapshots').length, 'log snapshot length').to.eq(1)
+        })
+      })
+
       it('logs out scrollTo', () => {
         cy.get('#scroll-to-both').scrollTo(25).then(function () {
           const { lastLog } = this
@@ -598,14 +654,15 @@ describe('src/cy/commands/actions/scroll', () => {
 
       it('#consoleProps', () => {
         cy.get('#scroll-to-both').scrollTo(25, { duration: 1 }).then(function ($container) {
-          const console = this.lastLog.invoke('consoleProps')
+          const consoleProps = this.lastLog.invoke('consoleProps')
 
-          expect(console.Command).to.eq('scrollTo')
-          expect(console.X).to.eq(25)
-          expect(console.Y).to.eq(0)
-          expect(console.Options).to.eq('{duration: 1}')
+          expect(consoleProps.name).to.eq('scrollTo')
+          expect(consoleProps.type).to.eq('command')
+          expect(consoleProps.props.X).to.eq(25)
+          expect(consoleProps.props.Y).to.eq(0)
+          expect(consoleProps.props.Options).to.eq('{duration: 1}')
 
-          expect(console['Scrolled Element']).to.eq($container.get(0))
+          expect(consoleProps.props['Scrolled Element']).to.eq($container.get(0))
         })
       })
     })
@@ -943,6 +1000,39 @@ describe('src/cy/commands/actions/scroll', () => {
         return null
       })
 
+      it('can turn off logging when protocol is disabled', { protocolEnabled: false }, function () {
+        cy.on('_log:added', (attrs, log) => {
+          this.hiddenLog = log
+        })
+
+        cy.get('#scroll-into-view-both h5').scrollIntoView({ log: false })
+
+        cy.then(function () {
+          const { lastLog, hiddenLog } = this
+
+          expect(lastLog.get('name'), 'log name').to.not.eq('scrollIntoView')
+          expect(hiddenLog).to.be.undefined
+        })
+      })
+
+      it('can send hidden log when protocol is enabled', { protocolEnabled: true }, function () {
+        cy.on('_log:added', (attrs, log) => {
+          this.hiddenLog = log
+        })
+
+        cy.get('#scroll-into-view-both h5').scrollIntoView({ log: false })
+
+        cy.then(function () {
+          const { lastLog, hiddenLog } = this
+
+          expect(lastLog.get('name'), 'log name').to.not.eq('scrollIntoView')
+
+          expect(hiddenLog.get('name'), 'log name').to.eq('scrollIntoView')
+          expect(hiddenLog.get('hidden'), 'log hidden').to.be.true
+          expect(hiddenLog.get('snapshots').length, 'log snapshot length').to.eq(1)
+        })
+      })
+
       it('logs out scrollIntoView', () => {
         cy.get('#scroll-into-view-both h5').scrollIntoView().then(function () {
           const { lastLog } = this
@@ -994,11 +1084,12 @@ describe('src/cy/commands/actions/scroll', () => {
 
       it('#consoleProps', () => {
         cy.get('#scroll-into-view-both h5').scrollIntoView().then(function ($container) {
-          const console = this.lastLog.invoke('consoleProps')
+          const consoleProps = this.lastLog.invoke('consoleProps')
 
-          expect(console.Command).to.eq('scrollIntoView')
-          expect(console['Applied To']).to.eq($container.get(0))
-          expect(console['Scrolled Element']).to.exist
+          expect(consoleProps.name).to.eq('scrollIntoView')
+          expect(consoleProps.type).to.eq('command')
+          expect(consoleProps.props['Applied To']).to.eq($container.get(0))
+          expect(consoleProps.props['Scrolled Element']).to.exist
         })
       })
     })

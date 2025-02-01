@@ -1,26 +1,13 @@
 import * as React from 'react'
-import ReactDOM from 'react-dom'
 import getDisplayName from './getDisplayName'
 import {
-  injectStylesBeforeElement,
   getContainerEl,
   ROOT_SELECTOR,
   setupHooks,
 } from '@cypress/mount-utils'
-import type { InternalMountOptions, InternalUnmountOptions, MountOptions, MountReturn, UnmountArgs } from './types'
+import type { InternalMountOptions, MountOptions, MountReturn, UnmountArgs } from './types'
 
-/**
- * Inject custom style text or CSS file or 3rd party style resources
- */
-const injectStyles = (options: MountOptions) => {
-  return (): HTMLElement => {
-    const el = getContainerEl()
-
-    return injectStylesBeforeElement(options, document, el)
-  }
-}
-
-export let lastMountedReactDom: (typeof ReactDOM) | undefined
+let mountCleanup: InternalMountOptions['cleanup']
 
 /**
  * Create an `mount` function. Performs all the non-React-version specific
@@ -42,23 +29,11 @@ export const makeMountFn = (
     throw Error('internalMountOptions must be provided with `render` and `reactDom` parameters')
   }
 
-  // Get the display name property via the component constructor
-  // @ts-ignore FIXME
-  const componentName = getDisplayName(jsx.type, options.alias)
-  const displayName = options.alias || componentName
-
-  const jsxComponentName = `<${componentName} ... />`
-
-  const message = options.alias
-    ? `${jsxComponentName} as "${options.alias}"`
-    : jsxComponentName
+  mountCleanup = internalMountOptions.cleanup
 
   return cy
-  .then(injectStyles(options))
   .then(() => {
     const reactDomToUse = internalMountOptions.reactDom
-
-    lastMountedReactDom = reactDomToUse
 
     const el = getContainerEl()
 
@@ -91,39 +66,43 @@ export const makeMountFn = (
 
     internalMountOptions.render(reactComponent, el, reactDomToUse)
 
-    if (options.log !== false) {
-      Cypress.log({
-        name: type,
-        type: 'parent',
-        message: [message],
-        // @ts-ignore
-        $el: (el.children.item(0) as unknown) as JQuery<HTMLElement>,
-        consoleProps: () => {
-          return {
-            // @ts-ignore protect the use of jsx functional components use ReactNode
-            props: jsx.props,
-            description: type === 'mount' ? 'Mounts React component' : 'Rerenders mounted React component',
-            home: 'https://github.com/cypress-io/cypress',
-          }
-        },
-      }).snapshot('mounted').end()
-    }
-
     return (
-      // Separate alias and returned value. Alias returns the component only, and the thenable returns the additional functions
       cy.wrap<React.ReactNode>(userComponent, { log: false })
-      .as(displayName)
       .then(() => {
         return cy.wrap<MountReturn>({
           component: userComponent,
           rerender: (newComponent) => makeMountFn('rerender', newComponent, options, key, internalMountOptions),
-          unmount: internalMountOptions.unmount,
         }, { log: false })
       })
       // by waiting, we delaying test execution for the next tick of event loop
       // and letting hooks and component lifecycle methods to execute mount
       // https://github.com/bahmutov/cypress-react-unit-test/issues/200
       .wait(0, { log: false })
+      .then(() => {
+        if (options.log !== false) {
+          // Get the display name property via the component constructor
+          // @ts-ignore FIXME
+          const componentName = getDisplayName(jsx)
+
+          const jsxComponentName = `<${componentName} ... />`
+
+          Cypress.log({
+            name: type,
+            type: 'parent',
+            message: [jsxComponentName],
+            // @ts-ignore
+            $el: (el.children.item(0) as unknown) as JQuery<HTMLElement>,
+            consoleProps: () => {
+              return {
+              // @ts-ignore protect the use of jsx functional components use ReactNode
+                props: jsx?.props,
+                description: type === 'mount' ? 'Mounts React component' : 'Rerenders mounted React component',
+                home: 'https://github.com/cypress-io/cypress',
+              }
+            },
+          })
+        }
+      })
     )
   // Bluebird types are terrible. I don't think the return type can be carried without this cast
   }) as unknown as globalThis.Cypress.Chainable<MountReturn>
@@ -135,30 +114,27 @@ export const makeMountFn = (
  *
  * This is designed to be consumed by `npm/react{16,17,18}`, and other React adapters,
  * or people writing adapters for third-party, custom adapters.
+ *
+ * @param {UnmountArgs} options used during unmounting
  */
-export const makeUnmountFn = (options: UnmountArgs, internalUnmountOptions: InternalUnmountOptions) => {
+export const makeUnmountFn = (options: UnmountArgs) => {
   return cy.then(() => {
-    return cy.get(ROOT_SELECTOR, { log: false }).then(($el) => {
-      if (lastMountedReactDom) {
-        internalUnmountOptions.unmount($el[0])
-        const wasUnmounted = internalUnmountOptions.unmount($el[0])
+    const wasUnmounted = mountCleanup?.()
 
-        if (wasUnmounted && options.log) {
-          Cypress.log({
-            name: 'unmount',
-            type: 'parent',
-            message: [options.boundComponentMessage ?? 'Unmounted component'],
-            consoleProps: () => {
-              return {
-                description: 'Unmounts React component',
-                parent: $el[0],
-                home: 'https://github.com/cypress-io/cypress',
-              }
-            },
-          })
-        }
-      }
-    })
+    if (wasUnmounted && options.log) {
+      Cypress.log({
+        name: 'unmount',
+        type: 'parent',
+        message: [options.boundComponentMessage ?? 'Unmounted component'],
+        consoleProps: () => {
+          return {
+            description: 'Unmounts React component',
+            parent: getContainerEl().parentNode,
+            home: 'https://github.com/cypress-io/cypress',
+          }
+        },
+      })
+    }
   })
 }
 
@@ -166,11 +142,7 @@ export const makeUnmountFn = (options: UnmountArgs, internalUnmountOptions: Inte
 // NOTE: we cannot use unmount here because
 // we are not in the context of a test
 const preMountCleanup = () => {
-  const el = getContainerEl()
-
-  if (el && lastMountedReactDom) {
-    lastMountedReactDom.unmountComponentAtNode(el)
-  }
+  mountCleanup?.()
 }
 
 const _mount = (jsx: React.ReactNode, options: MountOptions = {}) => makeMountFn('mount', jsx, options)
@@ -182,14 +154,6 @@ export const createMount = (defaultOptions: MountOptions) => {
   ) => {
     return _mount(element, { ...defaultOptions, ...options })
   }
-}
-
-/** @deprecated Should be removed in the next major version */
-// TODO: Remove
-export default _mount
-
-export interface JSX extends Function {
-  displayName: string
 }
 
 // Side effects from "import { mount } from '@cypress/<my-framework>'" are annoying, we should avoid doing this

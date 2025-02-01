@@ -1,29 +1,38 @@
-import chromeIcon from '../../../../node_modules/browser-logos/src/chrome/chrome.svg?url'
-import firefoxIcon from '../../../../node_modules/browser-logos/src/firefox/firefox.svg?url'
-import edgeIcon from '../../../../node_modules/browser-logos/src/edge/edge.svg?url'
-import electronIcon from '../../../../node_modules/browser-logos/src/electron/electron.svg?url'
-import canaryIcon from '../../../../node_modules/browser-logos/src/chrome-canary/chrome-canary.svg?url'
-import chromeBetaIcon from '../../../../node_modules/browser-logos/src/chrome-beta/chrome-beta.svg?url'
-import chromiumIcon from '../../../../node_modules/browser-logos/src/chromium/chromium.svg?url'
-import edgeBetaIcon from '../../../../node_modules/browser-logos/src/edge-beta/edge-beta.png'
-import edgeCanaryIcon from '../../../../node_modules/browser-logos/src/edge-canary/edge-canary.png'
-import edgeDevIcon from '../../../../node_modules/browser-logos/src/edge-dev/edge-dev.png'
-import firefoxNightlyIcon from '../../../../node_modules/browser-logos/src/firefox-nightly/firefox-nightly.svg?url'
-import firefoxDeveloperEditionIcon from '../../../../node_modules/browser-logos/src/firefox-developer-edition/firefox-developer-edition.svg?url'
-import genericBrowserLogo from '@packages/frontend-shared/src/assets/logos/generic-browser.svg?url'
+import {
+  IconBrowserElectronLight,
+  IconBrowserChrome,
+  IconBrowserChromeBeta,
+  IconBrowserChromeCanary,
+  IconBrowserChromeForTesting,
+  IconBrowserMozillaFirefox,
+  IconBrowserEdge,
+  IconBrowserChromium,
+  IconBrowserFirefoxNightly,
+  IconBrowserFirefoxDev,
+  IconBrowserEdgeCanary,
+  IconBrowserEdgeBeta,
+  IconBrowserEdgeDev,
+  IconBrowserWebkit,
+  IconGeneralGlobe,
+} from '@cypress-design/vue-icon'
 
 export const allBrowsersIcons = {
-  'Electron': electronIcon,
-  'Chrome': chromeIcon,
-  'Firefox': firefoxIcon,
-  'Edge': edgeIcon,
-  'Chromium': chromiumIcon,
-  'Canary': canaryIcon,
-  'Chrome Beta': chromeBetaIcon,
-  'Firefox Nightly': firefoxNightlyIcon,
-  'Firefox Developer Edition': firefoxDeveloperEditionIcon,
-  'Edge Canary': edgeCanaryIcon,
-  'Edge Beta': edgeBetaIcon,
-  'Edge Dev': edgeDevIcon,
-  'generic': genericBrowserLogo,
+  'electron': IconBrowserElectronLight,
+  'chrome': IconBrowserChrome,
+  'chrome beta': IconBrowserChromeBeta,
+  'canary': IconBrowserChromeCanary,
+  'chrome canary': IconBrowserChromeCanary,
+  'chrome for testing': IconBrowserChromeForTesting,
+  'custom chrome for testing': IconBrowserChromeForTesting,
+  'chromium': IconBrowserChromium,
+  'custom chromium': IconBrowserChromium,
+  'firefox': IconBrowserMozillaFirefox,
+  'firefox nightly': IconBrowserFirefoxNightly,
+  'firefox developer edition': IconBrowserFirefoxDev,
+  'edge': IconBrowserEdge,
+  'edge beta': IconBrowserEdgeBeta,
+  'edge canary': IconBrowserEdgeCanary,
+  'edge dev': IconBrowserEdgeDev,
+  'webkit': IconBrowserWebkit,
+  'generic': IconGeneralGlobe,
 }
